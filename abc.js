@@ -24,7 +24,7 @@
 import { Configuration, OpenAIApi } from "openai";
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import express, { response, text } from 'express';
+import express, { response } from 'express';
 import morgan from 'morgan';
 import moment from 'moment';
 import momentTZ from 'moment-timezone';
@@ -35,6 +35,7 @@ dotenv.config();
 // const app = express()
 // app.use(express.json())
 // app.use(morgan('dev'))
+console.log("process.env.OPENAI_API_KEY: ", process.env.OPENAI_API_KEY);
 
 const configuration = new Configuration({
     apiKey: process.env.OPENAI_API_KEY,
@@ -49,7 +50,7 @@ const textGeneration = async (prompt) => {
             model: 'text-davinci-003',
             prompt: `${prompt}: `,
             temperature: 0.9,
-            max_tokens: 200,
+            max_tokens: 250,
             top_p: 1,
             frequency_penalty: 0,
             presence_penalty: 0.6,
@@ -63,16 +64,15 @@ const textGeneration = async (prompt) => {
     } catch (error) {
         return {
             status: 0,
-            response: '',
-// error: error 
- };
+            response: ''
+        };
     }
 };
 
 
 const webApp = express();
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT||5000;
 
 webApp.use(express.urlencoded({ extended: true }));
 webApp.use(express.json());
@@ -179,57 +179,263 @@ webApp.post("/webhook", async (req, res) => {
           break;
         }
         case "Default Fallback Intent": {
-         
+         console.log("Default Fallback Intent");
          
             const api_url = 
                         `https://sheetdb.io/api/v1/keqbu2v4inoqz/ `;
-            function getData(url){
-                return fetch(url)
-                .then((response) => response.json())
-                .then((data) => {
-                    // return data;
-                })
-
-            }
-           console.log("response: ", response);
-            getData(api_url)
-
-            async function open(){
-
-
-            }
-//                         async function call(data){
-//                           if(data){
-//                  const params=body.queryResult.parameters;
-    
                     
-//                     let responseText = `Ok. ${params.person.name} Your email is ${data[0].Email} and your phone number is ${data[0].Phone}. Do you want to know anything else?`;
-//                    res.send({
-//                     "fullfillment": responseText
-//                   }) // text(responseText)    
-//                 }        
-    
-    
-//               }        
+                  // Defining async function
+                  async function getapi(url) {
+                      
+                      // Storing response
+                     let response = await fetch(url);
+                      
+                      // Storing data in form of JSON
+                      var data = await response.json();
+                      // console.log("data: ", data);
+         text(data)         
+         
+                    }
+          
+          async function text(data){
 
-//                   async function getapi(url,call) {
+            let action = req.body.queryResult.action;
+            let queryText = req.body.queryResult.queryText;
+            console.log("action: ", action);
+// console.log("data: ", data);
+let datas=JSON.stringify(data);
+let anc=`The is the list of all members in json form ${datas} Kindly read it carefully and  answer the question accordingly answer should be in text form should not contain json format.Remember last question and if need answer next question accordingly.My first question is ${queryText}`
+// console.log("anc: ", anc);           
+let result = await textGeneration(anc);
+console.log("result: ", result);           
+if (data) 
+            { 
+       
+          if (result.status == 1) {
+         console.log("responseText: ", result.response);
+         console.log("data:123 ");
+       const response= {"fulfillmentMessages": [
+          {
+            "text": {
+              "text": [
+                result.response
+              ]
+            }
+          }
+        ]}
+        res.send(response);
+         
+//  res.send({
+//                             // "fulfillmentText":result.response 
+                                    
+                             
+                           
+//                         })
+
+}
+       
+       
+        }
+            
+            
+        // res.send({
+        //       fulfillmentText: result.response
+        //   });
+            
+            
+            
+            
+        
+        // {
+          //   console.log("responseText: ", result.response);
+            // }         
+            // console.log("responseText: ", data);
+          }
+
+         getapi(api_url);   
+        //   else if (!intentName) {
+        //     console.log("intentName: ", intentName);
+        //     res.send({
+        //       fulfillmentText: `Sorry, I'm not able to help with that.`
+        //     });
+        //   }
+          break;
+        }
+
+
+
+//         case 'details': {
+//                         console.log("collected params: ", params);
+//                         console.log("Name ", params.person.name);
+            
+            
+//             if (params.person.name)
+//             {            const api_url = 
+//                         `https://sheetdb.io/api/v1/keqbu2v4inoqz/search_or?Name=${params.person.name}`;
+                    
+//                   // Defining async function
+//                   async function getapi(url) {
                       
 //                       // Storing response
 //                      let response = await fetch(url);
                       
 //                       // Storing data in form of JSON
 //                       var data = await response.json();
+//                       console.log("data: ", data);
+//                       call(data);
+//                     }
             
-            
-//                       // console.log("data: ", data);
-//                     call(data);
-//                   console.log("call: ", call);
-//                   }
-            
-// getapi(api_url)
+//                     function call(data){
+//             let a=Math.random();
+//             a=parseInt(a*100);
+//             console.log("a: ", a);
+//             if(a<20){
+
+                
+//                 let responseText = `Ok. ${params.person.name} Your email is ${data[0].Email} and your phone number is ${data[0].Phone}. Do you want to know anything else?`;
+//                 text(responseText)    
+//             }   else if(a<40){
+
+//                 let responseText=`${params.person.name}, I've got your details here. Your email is ${data[0].Email}, your phone number is ${data[0].Phone} , and your surname is ${data[0].Surname}.                        ` 
+//                 text(responseText)    
+
+//             }        
+// else if(a<60){
+
+//     let responseText=`${params.person.name}, I have your information on file. It looks like your email is ${data[0].Email}, your phone number is ${data[0].Phone}, and your surname is ${data[0].Surname}.
+//        `
+//        text(responseText)    
+
+//     }   
+// else if(a<80){
 
 
-        }
+//     let responseText=`${params.person.name}, your email is ${data[0].Email}, your phone number is ${data[0].Phone}, and your surname is ${data[0].Surname}.`
+//     text(responseText)    
+
+// }   
+// else if(a<90){let responseText=`${params.person.name}, I have your contact information here. Your email is ${data[0].Email}, your phone number is ${data[0].Phone}, and your surname is ${data[0].Surname}.`
+// text(responseText)    
+
+// }          
+// else{
+
+//     let responseText=`${params.person.name} , I have  details on record.  Email is ${data[0].Email},  Phone number is ${data[0].Phone}, and  Surname is ${data[0].Surname}`
+//     text(responseText)    
+
+// }  
+//                     }
+//                     function text(data){
+
+//                         if (data) {
+//                             res.send({
+//                                 fulfillmentText: data
+//                             });
+//                         }         
+//                         console.log("responseText: ", data);
+//                     }
+               
+//                      getapi(api_url);      
+//             }
+            
+//             console.log("collected params: ", params);
+
+            
+//             if (params.email)
+//             {            const api_url = 
+//                         `https://sheetdb.io/api/v1/keqbu2v4inoqz/search_or?Email=${params.person.email}`;
+                    
+//                   // Defining async function
+//                   async function getapi(url) {
+                      
+//                       // Storing response
+//                      let response = await fetch(url);
+                      
+//                       // Storing data in form of JSON
+//                       var data = await response.json();
+//                       console.log("data: ", data);
+//                       call(data);
+//                     }
+            
+//                     function call(data){
+//             let a=Math.random();
+//             a=parseInt(a*100);
+//             console.log("a: ", a);
+//             if(a<20){
+
+                
+//                 let responseText = `Ok. ${data[0].Name} Your email is ${params.person.email} and your phone number is ${data[0].Phone}. Do you want to know anything else?`;
+//                 text(responseText)    
+//             }   else if(a<40){
+
+//                 let responseText=`${data[0].Name}, I've got your details here. Your email is ${params.person.email}, your phone number is ${data[0].Phone} , and your surname is ${data[0].Surname}.                        ` 
+//                 text(responseText)    
+
+//             }        
+// else if(a<60){
+
+//     let responseText=`${data[0].Name}, I have your information on file. It looks like your email is ${params.person.email}, your phone number is ${data[0].Phone}, and your surname is ${data[0].Surname}.
+//        `
+//        text(responseText)    
+
+//     }   
+// else if(a<80){
+
+
+//     let responseText=`${data[0].Name}, your email is ${params.person.email}, your phone number is ${data[0].Phone}, and your surname is ${data[0].Surname}.`
+//     text(responseText)    
+
+// }   
+// else if(a<90){let responseText=`${data[0].Name}, I have your contact information here. Your email is ${params.person.email}, your phone number is ${data[0].Phone}, and your surname is ${data[0].Surname}.`
+// text(responseText)    
+
+// }          
+// else{
+
+//     let responseText=`${data[0].Name} , I have  details on record.  Email is ${params.person.email},  Phone number is ${data[0].Phone}, and  Surname is ${data[0].Surname}`
+//     text(responseText)    
+
+// }  
+
+//                     }
+                  
+//                     function text(data){
+
+//                         if (data) {
+//                             res.send({
+//                                 fulfillmentText: data
+//                             });
+//                         }         
+//                         console.log("responseText: ", data);
+//                     }
+               
+//                      getapi(api_url);      
+//             }
+            
+// else{console.log("ERROR");}            
+            
+//                      // console.log("abc: ", abc);
+            
+//             // res.send({
+//             //                 "fulfillmentMessages": [
+//             //                     {
+//             //                         "text": {
+//             //                             "text": [
+//             //                                function text(res){
+//             //                                 return res;
+//             //                                }
+            
+//             //                             ]
+//             //                         }
+//             //                     }
+//             //                 ]
+                           
+//             //             })
+            
+//                         break;
+                    
+//                       }  
+                      
 
 
 
@@ -259,7 +465,27 @@ text(data)
                         if (data) 
                         
                         {
-                                       
+                          
+                          
+                          
+                          // data.map((item)=>{
+                          //   let responseText = `Name: ${item.Name}, Email: ${item.Email}, Phone: ${item.Phone}, Surname: ${item.Surname}`;
+                          //   console.log("responseText: ", responseText);
+                          //   res.send({
+                          //       fulfillmentText: responseText
+                          //   });
+
+
+                          //  })
+                          
+                          // data.forEach((item) => {
+                          //   let responseText = `Name: ${item.Name}, Email: ${item.Email}, Phone: ${item.Phone}, Surname: ${item.Surname}`;
+                          //   console.log("responseText: ", responseText);
+                          //   res.send({
+                          //     fulfillmentText: responseText
+                          //   });
+                          // });
+                        
                           let responseTexts = [];
 
                           data.forEach((item) => {
@@ -277,6 +503,11 @@ text(data)
                         
                         
                         
+                          //   {
+                        //     res.send({
+                        //         fulfillmentText: data
+                        //     });
+                        // }
                       
                       
                       
@@ -288,6 +519,21 @@ text(data)
             
             console.log("abc: ", abc);
             
+            // res.send({
+            //                 "fulfillmentMessages": [
+            //                     {
+            //                         "text": {
+            //                             "text": [
+            //                                function text(res){
+            //                                 return res;
+            //                                }
+            
+            //                             ]
+            //                         }
+            //                     }
+            //                 ]
+                           
+            //             })
             
                         break;
                     
@@ -336,6 +582,8 @@ function text(data){
 
                       case 'row': {
             
+            
+                        // /            https://sheetdb.io/api/v1/58f61be4dda40?cast_numbers=name,email,phone,surname
                                     const api_url = 
                                     `https://sheetdb.io/api/v1/keqbu2v4inoqz/count`;
                                 
